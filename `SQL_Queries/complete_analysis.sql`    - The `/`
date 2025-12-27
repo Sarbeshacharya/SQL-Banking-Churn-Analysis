@@ -1,0 +1,506 @@
+
+/*
+===================================================================================================================================
+                                BANK CUSTOMER CHURN ANALYSIS - SQL PROJECT
+===================================================================================================================================
+Name: Sarbesh Acharya
+Date: 27 December 2025
+Dataset: 10,000 bank customers from Kaggle
+Tool: MySQL 8.0
+Project Duration: 4 days
+
+OVERVIEW:
+This is my first project. This project counts customers, identifies churn patterns, create segments and understand patterns.
+
+KEY FINDINGS:
+1. Geograhically Germany has the highest churn rate(32.44%) double than that of other countries.
+2. Older age(40+) are the customers who churned 70%. 
+3. Most suprise finding is that 3-4 products = 82-100% churn, more products = high churn rate
+4. 4,849 inactive members 
+5. Expected annual revenue loss due to churn: $3.71M
+=================================================================================================================================
+*/
+
+
+-- ===============================================================================================================================
+-- ===============================================================================================================================
+--                                                    FOUNDATION 
+-- ==========================================================================================================================
+-- ==========================================================================================================================
+
+-- Data Overview
+-- How many total customers are in the dataset and How many columns?
+select distinct count(*) as total_customer_in_the_dataset
+from churn_modelling;
+describe churn_modelling;
+-- Result = total 10000 customers and 14 columns.
+
+-- Missing Values Check
+-- Are there any NULL values in any columns? Missing data can skew analysis and recommendations
+SELECT 
+    COUNT(*) - COUNT(customerid) AS null_customerid,
+    COUNT(*) - COUNT(creditscore) AS null_creditscore,
+    COUNT(*) - COUNT(geography) AS null_geography,
+    COUNT(*) - COUNT(gender) AS null_gender,
+    COUNT(*) - COUNT(age) AS null_age,
+    COUNT(*) - COUNT(tenure) AS null_tenure,
+    COUNT(*) - COUNT(balance) AS null_balance,
+    COUNT(*) - COUNT(numofproducts) AS null_numofproducts,
+    COUNT(*) - COUNT(hascrcard) AS null_hascrcard,
+    COUNT(*) - COUNT(isactivemember) AS null_isactivemember,
+    COUNT(*) - COUNT(estimatedsalary) AS null_estimatedsalary,
+    COUNT(*) - COUNT(exited) AS null_exited
+FROM churn_modelling; 
+-- Result: There is no null values, clean dataset.
+
+-- Churn Summary: What's the overall churn rate and How many customers left vs stayed?
+select 
+count(*) as total_customers,
+sum(exited) as churned_customers,
+round(sum(exited)*100/count(*),2) as perct_of_churned_customers,
+count(*)- sum(exited) as stayed_customers
+from churn_modelling;
+-- Result: Overall churn rate is 20.37%. 2037 customers left and 7369 customers stayed out of 10,000 customers.
+
+-- Geography Distribution: How many customers are from each country?
+select geography,
+count(*) as total_customers
+from churn_modelling
+group by geography;
+-- Result: France has highest customers (5014, 50.14%), germany is second with 2509(25.09%) customers
+-- and spain with 2477(24.77%) of customers.
+
+-- Age Statistics
+-- What's the average, minimum, and maximum age of customers?
+select
+round(avg(age),2) as average_age_of_customers,
+min(age) as min_age_of_customers,
+max(age) as max_age_of_customers
+from churn_modelling;
+-- Result: Avg-age is 38.92yrs, Min-age is 18 and Max-age is 92.
+
+-- Gender Split
+-- What's the male vs female distribution? Show percentages.
+select gender, count(*) as gender_count,
+round(count(*)/100,2) as gender_distributin_perct
+from churn_modelling
+group by gender
+order by gender_distributin_perct desc;
+-- Result: Male are highest with 5457(54.57%) of customers and female with 4543(45.43%) of customers.
+
+-- Product Ownership
+-- How many customers have 1, 2, 3, or 4 products? Showing the distribution.
+select numofproducts, count(*) as count_of_customers,
+round(count(*)/100,2) as perct_of_numoprod
+from churn_modelling
+group by numofproducts
+order by count_of_customers desc;
+-- Result: Numofproduct-1 has highest customers with 5084(50.84%), Numofproduct-2 has 4590(45.90%) customers, 
+-- Numofproduct-3 has 266(2.66%) customers and Numofproduct-4 has only 60(0.60%) customers. 
+
+-- Credit Card Ownership
+-- What percentage of customers have a credit card?
+select count(*) as total_customer,
+sum(hascrcard) as total_cr_crds,
+round(sum(hascrcard)*100.0/count(*),2) as pct_of_credit_card
+from churn_modelling;
+-- Result: 7055(70.55%) of customers have credit cards.
+
+-- expected loss from churners asuming(0.02% as annual revenue)
+select count(*) as customers
+, round(sum(balance),2) as deposits_loss,
+round(sum(balance)*0.02,2) as expected_loss
+from churn_modelling
+where exited = 1;
+-- |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+-- =======================================================================================================================
+--                                        Key summaries from foundation
+-- -------------------------------------------------------------------------------------------------------------------------
+-- 1. There are total 10000 customers, with no null values.
+-- 2. Overall churn rate is 20.37% means 2037 customers have left. 
+-- 3. Geography: France has highest customers (5014, 50.14%), Germany: 2509(25.09%) and Spain: 2477(24.77%) of customers.
+-- 4. Gender: Male: 5457(54.57%) customers and female: 4543(45.43%) customers.
+-- 5. Age: Avg-age: 38.92yrs, Min-age: 18yrs and Max-age: 92yrs.
+-- 6. Product Distribution: 1 and 2 products have higher as 3 and 4 products have lower customers.
+-- 7. Creditcard: 7055(70.55%) have credit cards.
+-- -------------------------------------------------------------------------------------------------------------------------
+-- =========================================================================================================================
+-- |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+-- |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+
+
+
+-- ==========================================================================================================================
+-- ==========================================================================================================================
+--                                            PATTERN FINDING 
+-- ==========================================================================================================================
+-- ==========================================================================================================================
+
+-- Churn by Country
+-- Which country has the highest churn rate? Ranking all countries by churn percentage.
+select geography, count(*) as total_customers,
+sum(exited) as chuned_customer,
+round(sum(exited)*100.0/count(*) ,2) as pct_of_geo_churners
+from churn_modelling
+group by Geography
+order by pct_of_geo_churners desc;
+-- Result: Germany has the highest churn rate: 32.44%, Spain: 16.67% churn rate and france with 16.15% churn rate.
+
+-- Churn by Gender
+-- Do males or females churn more? Comparing churn rates.
+select gender, count(*) as total_customers,
+sum(exited) as chuned_customer,
+round(sum(exited)*100.0/count(*) ,2) as pct_of_gender_churners
+from churn_modelling
+group by gender
+order by pct_of_gender_churners desc; 
+-- Result: female customer churn more: 1139(25.07%) and Male: 898(16.46%). 
+
+-- Churn by Age Groups
+-- Creating age brackets (18-30, 31-40, 41-50, 51-60, 60+) and finding which age group churns most.
+with age_groups as (
+select 'age group' as age_groups, 
+exited, 
+case when age between 18 and 30 then 'young adults (18-30)'
+when age between 31 and 40 then 'adults (31-40)'
+when age between 41 and 50 then 'old_adults (41-50)'
+when age between 51 and 60 then 'old_aged (51-60)'
+when age >60 then 'senior(60+)'
+end as age_brackets
+from churn_modelling)
+
+select age_brackets,
+count(*) as total_customers,
+sum(exited) as churned_customers,
+round(sum(exited)*100.0/count(*),2) as pct_of_churn
+from age_groups
+group by age_brackets
+order by pct_of_churn desc;
+-- Result: Old aged(51-60) has highest churn rate 56.21%, old adults(41-50): 33.97%, senior(60+): 24.78%,
+-- Adults(31-40): 12.09% and young adults: 7.52%. 
+
+-- Active and Inactive Members
+-- Comparing churn rates between active and inactive members.
+select isactivemember,
+count(*) as total_customers,
+sum(exited) as churned_customers,
+round(sum(exited)*100.0/count(*),2) as churned_customer_perct
+from churn_modelling
+group by IsActiveMember
+order by churned_customer_perct desc;
+-- Result: Inactive members have highest churn 1302(26.85%) and Active members: 735(14.27%) churn.  
+
+-- Products and Churn
+-- What's the churn rate for customers with 1, 2, 3, or 4 products?
+select NumOfProducts,
+count(*) as count_of_customers, 
+sum(exited) as churned_customers,
+round(sum(exited)*100.0/count(*),2) as churned_customer_perct
+from churn_modelling
+group by NumOfProducts
+order by churned_customer_perct desc;
+-- Result: Customers having 4 numofproducts churn more 60(100%), numofproducts-3: 220(82.71%),
+-- numofproducts-1: 1409(27.71%) and  numofproducts-2 has lowest: 348(7.58%). 
+
+-- Credit Card Impact
+-- Do customers with credit cards churn less than those without?
+select hascrcard, 
+count(*) as count_of_customers, 
+sum(exited) as churned_customers,
+round(sum(exited)*100.0/count(*),2) as churned_customer_perct
+from churn_modelling
+group by hascrcard
+order by churned_customer_perct desc;
+-- Result: Those having credit card: (1424 churned out of 7055 customers, 20.18%) and 
+-- Not having  credit card: (613 churned out of 2945 customers,20.81%).
+
+-- Balance Segmentation
+-- Creating balance tiers: Zero balance, Low (1-50k), Medium (50k-100k), High (100k+).
+-- and finding What's the churn rate for each tier?
+with balance_segmentation as (
+select 
+exited, 
+(case when balance = 0 then 'zero_balance(0)'
+when balance between 1  and 50000 then 'low_balance(1-50k)'
+when balance between 50000  and 100000 then 'medium_balance(50k_100k)'
+when balance>100000 then 'high_balance(100k+)' end) as balance_tiers
+from churn_modelling)
+
+select balance_tiers,
+count(*) as count_of_customers, 
+sum(exited) as churned_customers,
+round(sum(exited)*100.0/count(*),2) as churned_customer_perct
+from balance_segmentation
+group by balance_tiers
+order by churned_customer_perct desc;
+-- Result: Those having low balance(1-50k): 26 out of 75 churned(34.67%), high_balance(100k): (1211 out of 4799 churned(25.23%),
+-- medium_balance(50-100k): 300 out of 1509 chuned(19.88%), zero_balance(0): 3617 out of 500 churned(13.82%).
+
+
+--  Salary vs Churn
+-- Is there a relationship between estimated salary and churn? Comparing average salaries of churners vs retained.
+SELECT 
+  CASE WHEN exited = 1 THEN 'churners' ELSE 'retained' END as segment,
+  COUNT(*) as count,
+  ROUND(AVG(estimatedsalary), 2) as avg_salary
+FROM churn_modelling
+GROUP BY exited;
+-- Result: Avg salary of churners:$101465.68(2037) and retained: $99738.39(7963)
+-- |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+-- =======================================================================================================================
+--                                        key summaries from  PATTERN FINDING 
+-- -------------------------------------------------------------------------------------------------------------------------
+-- 1. churn by Geography: Germany has highest churn rate(32.44%).
+-- 2. Churn by gender: female has highest churn rate (25.75%).
+-- 3. churn by age: Age between 51-60 has the highest churn rate(56.21%).
+-- 4. churn by active/inactive: inactive customers churn most(26.85%).
+-- 5. churn by numofproducts: Numofproducts 3 and 4 has highest churn rate.
+-- 6. churn by credit card: customer not having credit cards churn(613 churn out of  945 customers(20.81),
+--    customer having credit cards churn(1424 churn out of 7055 customers(20.18)
+-- 7. churn by balance: balance tiers from(1-50k) and (100k+) churn the most 34.67% and 25.23%.
+-- 8. churn by salary: Avg salary of churners is $101465.68
+-- -------------------------------------------------------------------------------------------------------------------------
+-- ==========================================================================================================================
+-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+
+
+
+-- ============================================================================================================================
+--                                                    BUSINESS INSIGHTS 
+-- ============================================================================================================================
+
+-- High-Risk Profile
+-- Creating a risk score (0-10) based on:
+-- Age > 40: +2 points
+-- Balance = 0: +3 points
+-- Not active member: +2 points
+-- NumOfProducts = 1: +2 points
+-- Geography = Germany: +1 point
+-- Showing distribution of risk scores and churn rate per score.
+with high_risk_profile as (
+select age, balance, isactivemember, numofproducts, geography,exited,
+(case when age > 40 then 2 else 0 end +
+case when balance = 0 then 3 else 0 end +
+case when IsActiveMember=0 then 2 else 0 end +
+case when numofproducts = 1 then 2 else 0 end +
+case when geography = 'germany' then 1 else 0 end) as risk_score
+from churn_modelling
+ )
+
+select risk_score,
+count(*) as count_of_customers, 
+sum(exited) as churned_customers,
+round(sum(exited)*100.0/count(*),2) as churned_customer_perct
+from high_risk_profile
+group by risk_score
+order by risk_score desc;
+-- Result: 154 out of 211(72.99%)customers have risk score 9 out of 10, risk-score 7: 467 out of 1094(42.69%),
+-- risk-score 6: 217 out of 433(42.69%), risk-score 5: 453 out of 2548(17.78%),  risk-score 4: 302 out of 1622(18.62). 
+
+-- Customer Segments
+-- Defining these segments:
+-- VIP: Balance > 150k
+-- Premium: Balance 100k-150k
+-- Standard: Balance 50k-100k
+-- Basic: Balance < 50k
+-- For each segment: Showing customer count, churn rate, average age. 
+with segments as (
+select balance, age, exited,
+case
+when balance> 150000 then 'VIP' 
+when balance between 100000 and 150000 then 'Premium'
+when balance between 50000 and 100000 then 'Standard'
+when balance < 50000 then 'Basic' end as Customer_segment
+from churn_modelling)
+
+select customer_segment, 
+round(avg(age),2) as Average_age,
+count(*) as total_customers,
+sum(exited) as churn_,
+round(sum(exited)*100.0/count(*),2) as churn_rate,
+round(sum(balance),2) as Expected_loss 
+from segments
+group by customer_segment
+ order by churn_rate desc;
+-- Result: Premium segment= avg.age:39.30yrs, customers:3830, churners:987, churnrate:25.77%, expected-loss:$473746989.74
+-- VIP-segment= avg.age:38.76yrs, customers:969, churners:224, churnrate:23.12%, expected-loss:$161597871.64
+-- Standard-segment= avg.age:39.14yrs, customers:1509, churners:300, churnrate:19.88%, expectedloss:$126555466.6
+-- Basic-segment=  avg.age:38.49yrs, customers:3692, churners:526, churnrate:14.25%	expectedloss:$2958564.9
+
+-- Engagement Analysis
+-- Defining "Engaged" as: IsActiveMember=1 AND NumOfProducts<=2 AND HasCrCard=1
+-- Comparing engaged vs disengaged customers' churn rates.
+with engagement as (
+select exited,
+case when isactivemember =1 and numofproducts<=2 and hascrcard=1 then 'Engaged'
+else 'Dis-engaged' end as Engagement_analysis
+from churn_modelling)
+
+select Engagement_analysis, 
+count(*) as total_customers,
+sum(exited) as churn_,
+round(sum(exited)*100.0/count(*),2) as churn_rate
+from engagement 
+group by engagement_analysis
+order by churn_rate desc;
+-- Result: Dis-engaged customers:6490, churners:1632 and churn rate:25.15%
+-- Engaged customers: 3510, churners:405 and churn rate:11.54%
+
+-- Tenure Impact
+-- What's the relationship between tenure and churn?
+-- Grouping by tenure years, showing churn rate for each.
+select tenure, count(*) as total_customers,
+sum(exited) as churn_,
+round(sum(exited)*100.0/count(*),2) as churn_rate
+from churn_modelling
+group by Tenure
+order by churn_rate desc;
+-- Result: Tenure spending < 1 years has high churn rate(23%) and tenure upto 7yrs has lowest churn rate(17.22%)
+
+-- Germany Deep Dive
+-- Germany has highesgt churn. Analyzing German customers specifically:
+-- What's their average age vs other countries?
+-- What's their product ownership pattern?
+-- What's their activity rate?
+
+select 
+'germany' as germany_deep_dive, round(avg(NumOfProducts),2) as avg_ownership_pattern, 
+sum(IsActiveMember) as activemembers,
+count(*) as total_customers,
+round(avg(age),2) as average_age,
+sum(exited) as churn_,
+round(sum(exited)*100.0/count(*),2) as churn_rate
+from churn_modelling
+group by geography
+having Geography = 'germany'
+
+union all
+
+select 
+'other countries' as germany_deep_dive,
+round(avg(NumOfProducts),2) as avg_ownership_pattern, 
+sum(IsActiveMember) as activemembers,
+count(*) as total_customers,
+round(avg(age),2) as average_age,
+sum(exited) as churn_,
+round(sum(exited)*100.0/count(*),2) as churn_rate
+from churn_modelling
+group by geography
+having Geography!= 'germany';
+-- Result: Germany Average age is higher than other countries, germany have low active members and high-churn rates.
+
+
+-- Zero Balance Customers
+-- How many customers have zero balance? What's their churn rate?
+-- Comparing their characteristics to customers with balances.
+
+select 
+'zero_balance_customers' as customers,
+count(*) as customers_count, balance as total_balance,
+ round(avg(age),2) as average_age, 
+round(avg(NumOfProducts),2) as average_products,
+ round(avg(EstimatedSalary),2) as avg_sal,
+ round(avg(Tenure),2) as average_tenure,
+round( avg(CreditScore),2) as avg_credit_score
+from churn_modelling
+where balance = 0
+
+union all 
+select 'balance_customers' as customers,
+count(*) as customers_count,
+round(sum(balance),2) as total_balance, 
+round(avg(age),2) as average_age, 
+round(avg(NumOfProducts),2) as average_products,
+ round(avg(EstimatedSalary),2) as avg_sal,
+ round(avg(Tenure),2) as average_tenure,
+round( avg(CreditScore),2) as avg_credit_score
+from churn_modelling
+where balance >0;
+-- Result: zero balance customers have the highest average products(1.78%) avg salary is less but tenure is high >5yrs. 
+
+
+-- Q23. Multi-Product Mystery
+-- You found earlier that 3-4 product customers churn more. Investigate:
+-- What's the average age of 3-4 product customers?
+-- What's their average balance?
+-- What percentage are active members?
+
+select NumOfProducts, count(*) as total_customers,
+round(avg(age),2) as average_age, 
+round(avg(balance),2) as average_balance, 
+round(sum(IsActiveMember)*100/count(*),2) as pct_active_member
+from churn_modelling
+group by NumOfProducts
+having NumOfProducts between 3 and 4;
+-- Result: Average age: 43.20 for 3 products and 45.68 for 4, avg balance:75458.33 and 93733.14,
+-- pct_active_member: 48.33 and 42.48
+
+-- Credit Score Analysis
+-- Creating credit score ranges: Poor (300-500), Fair (501-650), Good (651-750), Excellent (750+)
+with credit_score as (
+select exited,
+(case when CreditScore between 300 and 500 then 'poor(300-500)'
+when CreditScore between 501 and 650 then 'fair(501-650)'
+when CreditScore between 651 and 750 then 'good(651-750)'
+when CreditScore> 750 then 'excellent(750+)' end 
+) as credit_score_range
+from churn_modelling)
+
+select
+round(sum(exited)*100.0/count(*),2) as churn_rate,
+credit_score_range
+from credit_score
+group by credit_score_range
+order by  churn_rate desc;
+-- Result: poor(300-500) has highest churn rate 23.64 following by fair(501-650): 21.08% churn rate,
+--  excellent(750+): 19.59% churn rate and good(651-750): 19.25% churn rate.
+
+-- Loyal Customer Profile
+-- Defining "Loyal" as: Exited=0 AND Tenure>=5 AND IsActiveMember=1
+-- How many loyal customers exist and What are their characteristics?
+ SELECT 
+  'Loyal Customers' as segment,
+  COUNT(*) as customer_count,
+  ROUND(AVG(age), 2) as avg_age,
+  ROUND(AVG(balance), 2) as avg_balance,
+  ROUND(AVG(creditscore), 2) as avg_credit_score,
+  ROUND(AVG(estimatedsalary), 2) as avg_salary,
+  ROUND(AVG(numofproducts), 2) as avg_products,
+  ROUND(SUM(hascrcard) * 100.0 / COUNT(*), 2) as pct_with_card
+FROM churn_modelling
+WHERE exited = 0 AND tenure >= 5 AND isactivemember = 1;
+-- Result: Loyal Customers:2397, avgage:39.15, avgbalance:$71759.3, avgcreditscore652.44, avgsalary:98798.54, avgproducts:1.54
+-- crcard: 71.84
+-- |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+--     =======================================================================================================================
+--                                        key summaries from  PATTERN FINDING 
+--    -------------------------------------------------------------------------------------------------------------------------
+-- 1. High risk customers: Score 9-10: 72.99% churn(small group), Score 7–8:43% churn  Score 5–6: ~18–43% churn  
+-- Lower scores: <20% churn
+-- 2. High balance segments: premium(100k-150k)churn:25.77% and VIP(150K+) churn: 23.12%,
+-- potential loss is in VIP/Premium segments. 
+-- 3. Engagement: Disngaged(exited): 6390 customers and 25.15% churn rate, Engaged 3510customers churn rate:11.54%.
+-- 4. Tenure: low tenure years: higher churn rate and high tenure years: 8-10 years have higher churn rate.
+-- 5. Germany is at highest risk having churn rate double than that of other countries,
+-- avg_ownership:1.52	activemembers:1248	customers:2509	avgage:39.77	churn:814	churn rate:32.44%
+-- 6. There 3617 are customers with 0 balance, avg_age:38.43yrs, avg_products:1.78, avg_salary:98983.56, 
+-- tenure:5.07, avg_creditscore:649.45 tenure: 5 years 
+-- balance_customers:6383 customers, total balance::764858892.88, avg_age:39.20	 avg_products:1.39,	
+-- avg_salary:100717.35, avg_tenure:4.98, avg_credit_score: 651.14
+-- 7. Numofproducts: having 3 and 4 products are high risk products as there is high churn rate even 100% for product 4,
+-- their avg_age is greater tha 43 means high churn rate for old customers. there are low count of customers for 
+-- numofproducts 3 and 4. 
+-- 8. Credit_score: Having poor(300-500) credit score range has the highest churn rate: 23.64%, followed by fair(501-650)
+-- with 21.08% churn rate. excellent(750+) has 19.59% churn rat and 19.25 for good(651-750).
+-- 9. loyal customers: profile: customers:2397, avg_age:39.15, avg_balance:$71759.3, avg_credit_Score:652.44,
+-- avg_salary:$98798.54, avg_products:1.54, withcrcard:71.84%
+
+-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+-- ================================================================================================================================
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- --------------------------------------------------------------------------------------------------------------------------------
+-- ================================================================================================================================
+-- ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+   
