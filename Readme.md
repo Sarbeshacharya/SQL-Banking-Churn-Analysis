@@ -205,7 +205,6 @@ The revenue modeling and LTV calculations? Those are coming in Project #2 after 
 
 ---
 
-```
 
 Dataset source: [Kaggle Bank Churn](https://www.kaggle.com/datasets/shantanudhakadd/bank-customer-churn-prediction)
 
