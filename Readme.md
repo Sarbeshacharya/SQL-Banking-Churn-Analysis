@@ -203,6 +203,8 @@ The revenue modeling and LTV calculations? Those are coming in Project #2 after 
 - Not all insights are equally actionable (credit score doesn't matter, age does)
 - Sometimes the best action is to STOP doing something (4-product bundles)
 
+---
+
 ## Dashboard Visualization
 
 Below is the Excel dashboard showcasing key insights from the bank customer churn analysis:
@@ -210,10 +212,11 @@ Below is the Excel dashboard showcasing key insights from the bank customer chur
 ![Dashboard](images/dashboard.png)
 
 ### Key Insights:
-- Customer churn patterns by demographics
-- Risk segments identification
-- Retention metrics and trends
-
+ Interactive dashboard featuring:
+  - Geographic analysis (Germany crisis)
+  - Age group breakdown (40+ spike)
+  - Product paradox visualization
+  - Gender and activity insights
 ---
 
 
