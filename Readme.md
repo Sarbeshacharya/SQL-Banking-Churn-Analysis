@@ -158,7 +158,7 @@ ORDER BY risk_score DESC;
 Coming soon:
 - Detailed insights document
 - Methodology (how I approached this)
-- Maybe Excel dashboard if I get around to it
+
 
 ---
 
