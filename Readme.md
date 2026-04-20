@@ -61,6 +61,60 @@ Built RFM model (Recency = Tenure, Frequency = NumOfProducts, Monetary = Balance
 Calculated Customer Lifetime Value and identified high-balance, low-product customers as prime cross-sell targets.
 
 ---
+### My Favourite Queries
+
+**1. Cohort Analysis**  
+This query helped me understand churn across the entire customer lifecycle and discover the "sweet spot" at 6-8 years.
+
+```sql
+with tenure_co as (
+select exited, balance, estimatedsalary, age, CreditScore, NumOfProducts,
+case when tenure between 0 and 2 then '0-2 years'
+when tenure between 3 and 5 then '3-5 years'
+when tenure between 6 and 8 then '6-8 years'
+when tenure>=9 then '9 years+' end as tenure_Cohort
+from churn_modelling)
+select tenure_Cohort,
+count(*) as Customers,
+sum(exited) as total_churned_customers,
+round(avg(exited)*100.0,2) as Churn_Rate,
+round(avg(age),2) as Average_Age,
+round(avg(creditscore),2) as Average_Credit_Score,
+round(avg(numofproducts),2) as Average_Products,
+round(avg(balance),2) as Average_Balance,
+round(avg(estimatedsalary),2) as Average_salary
+from tenure_co
+group by tenure_Cohort
+order by tenure_Cohort;
+
+2. **RFM Segmentation **
+This query turned raw data into clear customer personas and business segments.
+
+```sql
+with rfm as(
+select CustomerId ,tenure, numofproducts, balance, estimatedsalary, age,
+round(Balance+EstimatedSalary,2) as monetary_value
+from churn_modelling),
+rfm_score as (
+select *,
+ntile(5) over (order by Tenure) as R_score,
+ntile(5) over (order by NumOfProducts) as f_score,
+ntile(5) over (order by monetary_value) as M_score
+from rfm)
+select *,
+case when  R_score >= 4 and f_score>=4 and M_score>= 4 then 'Premium Customers'
+when  R_score >= 4 and f_score>=4  then 'Loyal Customers'
+when  M_score >= 4 and (R_score<=3 and M_score<=3) then 'High-Value At Risk'
+when r_score<=2 then "New customers"
+  WHEN R_score <= 2 AND F_score <= 2 AND M_score <= 2 THEN 'Hibernating customers'
+  WHEN R_score >= 3 AND F_score >= 3
+           THEN 'Potential Loyal customers' else 'Standard Customers' end as RFM_Segment,
+ CONCAT(R_score, F_score, M_score) as RFM_segment,
+       R_score + F_score + M_score as RFM_score
+
+        FROM rfm_score
+        order by RFM_score desc;
+---
 
 ### Financial Impact Summary
 
