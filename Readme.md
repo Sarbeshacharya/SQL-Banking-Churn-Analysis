@@ -61,33 +61,7 @@ Built RFM model (Recency = Tenure, Frequency = NumOfProducts, Monetary = Balance
 Calculated Customer Lifetime Value and identified high-balance, low-product customers as prime cross-sell targets.
 
 ---
-### My Favourite Queries
 
-**1. Cohort Analysis**  
-This query helped me understand churn across the entire customer lifecycle and discover the "sweet spot" at 6-8 years.
-
-```sql
-with tenure_co as (
-select exited, balance, estimatedsalary, age, CreditScore, NumOfProducts,
-case when tenure between 0 and 2 then '0-2 years'
-when tenure between 3 and 5 then '3-5 years'
-when tenure between 6 and 8 then '6-8 years'
-when tenure>=9 then '9 years+' end as tenure_Cohort
-from churn_modelling)
-select tenure_Cohort,
-count(*) as Customers,
-sum(exited) as total_churned_customers,
-round(avg(exited)*100.0,2) as Churn_Rate,
-round(avg(age),2) as Average_Age,
-round(avg(creditscore),2) as Average_Credit_Score,
-round(avg(numofproducts),2) as Average_Products,
-round(avg(balance),2) as Average_Balance,
-round(avg(estimatedsalary),2) as Average_salary
-from tenure_co
-group by tenure_Cohort
-order by tenure_Cohort;
-
----
 ### Financial Impact Summary
 
 - Total Deposits Lost: $185.7M  
@@ -142,5 +116,31 @@ LinkedIn: https://www.linkedin.com/in/sarbesh-acharya-93a3251b4
 GitHub: github.com/Sarbeshacharya
 
 ---
+### My Favourite Query
 
-**Tags:** #BankingAnalytics #CustomerChurn #SQL #RFM #CohortAnalysis #CLV #DataAnalysis #Fintech #Excel
+**Cohort Analysis**  
+This query helped me understand churn across the entire customer lifecycle and discover the "sweet spot" at 6-8 years.
+
+```sql
+with tenure_co as (
+select exited, balance, estimatedsalary, age, CreditScore, NumOfProducts,
+case when tenure between 0 and 2 then '0-2 years'
+when tenure between 3 and 5 then '3-5 years'
+when tenure between 6 and 8 then '6-8 years'
+when tenure>=9 then '9 years+' end as tenure_Cohort
+from churn_modelling)
+select tenure_Cohort,
+count(*) as Customers,
+sum(exited) as total_churned_customers,
+round(avg(exited)*100.0,2) as Churn_Rate,
+round(avg(age),2) as Average_Age,
+round(avg(creditscore),2) as Average_Credit_Score,
+round(avg(numofproducts),2) as Average_Products,
+round(avg(balance),2) as Average_Balance,
+round(avg(estimatedsalary),2) as Average_salary
+from tenure_co
+group by tenure_Cohort
+order by tenure_Cohort;
+
+---
+ #BankingAnalytics #CustomerChurn #SQL #RFM #CohortAnalysis #CLV #DataAnalysis #Fintech #Excel
