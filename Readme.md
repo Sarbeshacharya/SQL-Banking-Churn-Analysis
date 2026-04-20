@@ -86,11 +86,12 @@ round(avg(estimatedsalary),2) as Average_salary
 from tenure_co
 group by tenure_Cohort
 order by tenure_Cohort;
+---
 
 2. **RFM Segmentation **
 This query turned raw data into clear customer personas and business segments.
 
-
+```sql
 with rfm as(
 select CustomerId ,tenure, numofproducts, balance, estimatedsalary, age,
 round(Balance+EstimatedSalary,2) as monetary_value
