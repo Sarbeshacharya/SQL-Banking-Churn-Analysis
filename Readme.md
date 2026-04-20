@@ -87,11 +87,12 @@ from tenure_co
 group by tenure_Cohort
 order by tenure_Cohort;
 
+---
 
-2. RFM Segmentation 
+**2. RFM Segmentation ** 
 This query turned raw data into clear customer personas and business segments.
 
-
+```sql
 with rfm as(
 select CustomerId ,tenure, numofproducts, balance, estimatedsalary, age,
 round(Balance+EstimatedSalary,2) as monetary_value
@@ -116,7 +117,7 @@ when r_score<=2 then "New customers"
         FROM rfm_score
         order by RFM_score desc;
 ---
-
+---
 ### Financial Impact Summary
 
 - Total Deposits Lost: $185.7M  
